@@ -89,19 +89,6 @@ function Dashboard() {
     <AppShell
       title="Monitors"
       subtitle="We're not checking if it's alive — we're just knocking on the door."
-      actions={
-        <Button
-          variant="secondary"
-          size="sm"
-          className="gap-2"
-          onClick={() => {
-            forceRunAll();
-            toast("Knocking on every door at once.");
-          }}
-        >
-          <Zap className="size-3.5" /> Wake all
-        </Button>
-      }
     >
       {({ openEdit, openNew, hydrated }) => (
         <div className="mx-auto max-w-7xl space-y-6">
