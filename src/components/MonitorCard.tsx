@@ -127,12 +127,17 @@ export function MonitorCard({
             {m.favorite && (
               <Star className="size-3.5 fill-warning text-warning" />
             )}
-            <Badge
-              variant="outline"
-              className="ml-auto shrink-0 border-glass-border bg-glass font-mono text-[10px]"
-            >
-              {m.method}
-            </Badge>
+            <span className="ml-auto flex shrink-0 items-center gap-1.5">
+              <span className="font-mono text-[9px] text-muted-foreground/40 transition-opacity group-hover:text-muted-foreground/70">
+                drag to rearrange
+              </span>
+              <Badge
+                variant="outline"
+                className="border-glass-border bg-glass font-mono text-[10px]"
+              >
+                {m.method}
+              </Badge>
+            </span>
           </div>
           {m.url ? (
             <a
