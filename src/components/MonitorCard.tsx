@@ -216,8 +216,8 @@ export function MonitorCard({
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                variant="destructive"
                 onSelect={() => setConfirm(true)}
+                className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="size-4" /> Delete
               </DropdownMenuItem>
@@ -241,7 +241,7 @@ export function MonitorCard({
             <Pencil className="size-4" /> Edit
           </ContextMenuItem>
           <ContextMenuSeparator />
-          <ContextMenuItem variant="destructive" onSelect={() => setConfirm(true)}>
+          <ContextMenuItem className="text-destructive focus:text-destructive" onSelect={() => setConfirm(true)}>
             <Trash2 className="size-4" /> Delete
           </ContextMenuItem>
         </ContextMenuContent>
