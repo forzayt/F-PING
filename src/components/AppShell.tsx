@@ -98,6 +98,12 @@ export function AppShell({
                       Activity
                     </Link>
                     <Link
+                      to="/commits"
+                      className="rounded-lg px-3 py-2 hover:bg-sidebar-accent"
+                    >
+                      Commit Logs
+                    </Link>
+                    <Link
                       to="/settings"
                       className="rounded-lg px-3 py-2 hover:bg-sidebar-accent"
                     >

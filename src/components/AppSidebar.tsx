@@ -6,6 +6,7 @@ import {
   Zap,
   PanelLeftClose,
   PanelLeft,
+  GitCommit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 const NAV = [
   { to: "/", label: "Monitors", icon: LayoutGrid },
   { to: "/activity", label: "Activity", icon: Activity },
+  { to: "/commits", label: "Commit Logs", icon: GitCommit },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
@@ -122,3 +124,5 @@ export function AppSidebar({
     </aside>
   );
 }
+
+
