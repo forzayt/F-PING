@@ -92,10 +92,12 @@ export function MiniChart({ data }: { data: DayStat[] }) {
   const totalH = MONTH_LABEL_H + gridH + LEGEND_H + 4;
 
   return (
-    <div className="overflow-x-auto rounded-md" style={{ background: "#0d1117", padding: "10px 14px" }}>
+    <div className="w-full rounded-md" style={{ background: "#0d1117", padding: "10px 14px" }}>
       <svg
-        width={totalW}
+        width="100%"
         height={totalH}
+        viewBox={`0 0 ${totalW} ${totalH}`}
+        preserveAspectRatio="xMidYMid meet"
         aria-label="Activity contribution graph"
         style={{ display: "block" }}
       >
