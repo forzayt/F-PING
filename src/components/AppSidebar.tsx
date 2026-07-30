@@ -1,16 +1,14 @@
+import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   LayoutGrid,
   Settings,
   Zap,
-  PanelLeftClose,
-  PanelLeft,
   GitCommit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
-import { Button } from "@/components/ui/button";
 
 const NAV = [
   { to: "/", label: "Monitors", icon: LayoutGrid },
@@ -19,13 +17,8 @@ const NAV = [
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
-export function AppSidebar({
-  collapsed,
-  onToggle,
-}: {
-  collapsed: boolean;
-  onToggle: () => void;
-}) {
+export function AppSidebar() {
+  const [hovered, setHovered] = useState(false);
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const total = useStore((s) => s.monitors.length);
   const active = useStore((s) => s.monitors.filter((m) => m.enabled).length);
@@ -34,18 +27,28 @@ export function AppSidebar({
   );
 
   return (
-    <aside
-      className={cn(
-        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-glass-border bg-sidebar/60 backdrop-blur-xl transition-[width] duration-300 md:flex",
-        collapsed ? "w-[72px]" : "w-64",
-      )}
-    >
-      <div className="flex items-center gap-2 px-4 py-5">
-        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
-          <Zap className="size-4" />
-        </div>
-        {!collapsed && (
-          <div className="min-w-0">
+    <>
+      {/* Spacer to preserve layout width for collapsed state */}
+      <div className="hidden w-[72px] shrink-0 md:block" />
+
+      <aside
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className={cn(
+          "fixed top-0 left-0 z-40 hidden h-screen flex-col border-r border-glass-border bg-sidebar/95 backdrop-blur-xl transition-[width,box-shadow] duration-300 ease-in-out md:flex overflow-hidden",
+          hovered ? "w-64 shadow-2xl shadow-black/50" : "w-[72px]",
+        )}
+      >
+        <div className="flex items-center gap-3 px-4 py-5">
+          <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+            <Zap className="size-4" />
+          </div>
+          <div
+            className={cn(
+              "min-w-0 transition-opacity duration-200",
+              hovered ? "opacity-100" : "opacity-0 pointer-events-none",
+            )}
+          >
             <p className="font-display text-lg leading-none font-bold tracking-tight">
               FPING
             </p>
@@ -53,32 +56,42 @@ export function AppSidebar({
               service awakener
             </p>
           </div>
-        )}
-      </div>
+        </div>
 
-      <nav className="flex flex-col gap-1 px-3">
-        {NAV.map((item) => {
-          const isActive = pathname === item.to;
-          return (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                isActive
-                  ? "bg-sidebar-accent text-foreground"
-                  : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
-              )}
-            >
-              <item.icon className="size-4 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
-      </nav>
+        <nav className="flex flex-col gap-1 px-3">
+          {NAV.map((item) => {
+            const isActive = pathname === item.to;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "flex items-center gap-3.5 rounded-xl px-3.5 py-2.5 text-sm transition-colors whitespace-nowrap",
+                  isActive
+                    ? "bg-sidebar-accent text-foreground font-medium"
+                    : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
+                )}
+              >
+                <item.icon className="size-4 shrink-0" />
+                <span
+                  className={cn(
+                    "transition-opacity duration-200",
+                    hovered ? "opacity-100" : "opacity-0 pointer-events-none",
+                  )}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
 
-      {!collapsed && (
-        <div className="mt-6 px-3">
+        <div
+          className={cn(
+            "mt-6 px-3 transition-opacity duration-200",
+            hovered ? "opacity-100" : "opacity-0 pointer-events-none",
+          )}
+        >
           <div className="glass rounded-2xl p-3">
             <p className="text-[11px] tracking-widest text-muted-foreground uppercase">
               This session
@@ -97,31 +110,20 @@ export function AppSidebar({
             </dl>
           </div>
         </div>
-      )}
 
-      <div className="mt-auto p-3">
-        {!collapsed && (
-          <p className="mb-3 px-1 text-[11px] leading-relaxed text-muted-foreground">
+        <div className="mt-auto p-3">
+          <p
+            className={cn(
+              "px-1 text-[11px] leading-relaxed text-muted-foreground transition-opacity duration-200",
+              hovered ? "opacity-100" : "opacity-0 pointer-events-none",
+            )}
+          >
             If this dashboard is closed, your servers are officially on their
             own.
           </p>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onToggle}
-          className="w-full justify-start text-muted-foreground"
-        >
-          {collapsed ? (
-            <PanelLeft className="size-4" />
-          ) : (
-            <>
-              <PanelLeftClose className="size-4" /> Collapse
-            </>
-          )}
-        </Button>
-      </div>
-    </aside>
+        </div>
+      </aside>
+    </>
   );
 }
 

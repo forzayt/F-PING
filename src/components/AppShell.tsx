@@ -29,7 +29,6 @@ export function AppShell({
   children: (ctx: ShellCtx) => ReactNode;
 }) {
   const hydrated = useHydrated();
-  const [collapsed, setCollapsed] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Monitor | null>(null);
@@ -69,10 +68,7 @@ export function AppShell({
   return (
     <div className="aurora-bg min-h-screen">
       <div className="flex min-h-screen w-full">
-        <AppSidebar
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((v) => !v)}
-        />
+        <AppSidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-30 border-b border-glass-border bg-background/60 backdrop-blur-xl">
