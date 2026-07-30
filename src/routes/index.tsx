@@ -124,7 +124,8 @@ function Dashboard() {
             ))}
           </section>
 
-          <section className="glass animate-rise rounded-2xl p-4">
+{/* Hidden for now */}
+          {/* <section className="glass animate-rise rounded-2xl p-4">
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-sm font-semibold">Requests, last 14 days</h2>
               <span className="text-[11px] text-muted-foreground">
@@ -132,7 +133,7 @@ function Dashboard() {
               </span>
             </div>
             <MiniChart data={stats} />
-          </section>
+          </section> */}
 
           {/* controls */}
           <section className="flex flex-wrap items-center gap-2">

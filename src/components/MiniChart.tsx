@@ -1,207 +1,198 @@
+import { useEffect, useRef } from "react";
 import type { DayStat } from "@/types";
 
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const SHOWN_DAYS = [1, 3, 5]; // Mon, Wed, Fri
+// ─── constants ────────────────────────────────────────────────────────────────
+const CANVAS_H = 88;
+const BASELINE_R = 0.64;
+const SCROLL_SPEED = 0.7;
+const GRID_SPACING = 22;
+const FLAT_GAP = 18;   // px between spikes
+const PRE_LEAD = 60;   // lead-in flat px
 
-// GitHub-style green shades: 0 = empty, 1–4 = increasing intensity
-const LEVEL_COLORS = [
-  "#161b22", // level 0 – no activity
-  "#0e4429", // level 1
-  "#006d32", // level 2
-  "#26a641", // level 3
-  "#39d353", // level 4
-];
+// ─── waveform builder ─────────────────────────────────────────────────────────
+// Flat baseline everywhere; one fixed-height sharp spike per individual request hit.
+function buildWaveform(data: DayStat[]): Float32Array {
+  const baseline = CANVAS_H * BASELINE_R;
+  const buf: number[] = [];
 
-function getLevel(count: number, max: number): number {
-  if (count === 0 || max === 0) return 0;
-  const ratio = count / max;
-  if (ratio <= 0.25) return 1;
-  if (ratio <= 0.5) return 2;
-  if (ratio <= 0.75) return 3;
-  return 4;
-}
+  const flat = (n: number) => {
+    for (let i = 0; i < n; i++) buf.push(baseline);
+  };
 
-type Cell = { date: Date | null; stat: DayStat | null; dayIndex: number };
+  // One sharp ECG QRS spike — identical every time (each request = one beat)
+  const spike = () => {
+    buf.push(baseline + 3, baseline + 5);                    // Q dip
+    buf.push(baseline - 16, baseline - 40, baseline - 54);  // R rising
+    buf.push(baseline - 40, baseline - 16);                  // R falling
+    buf.push(baseline + 10, baseline + 5, baseline + 2);    // S dip
+    buf.push(baseline);                                      // return
+  };
 
-function buildGrid(data: DayStat[]): Cell[][] {
-  const lookup = new Map(data.map((d) => [d.day, d]));
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const sorted = [...data].sort((a, b) => a.day.localeCompare(b.day));
 
-  // Start 52 weeks ago, snap to the nearest Sunday
-  const startDate = new Date(today);
-  startDate.setDate(today.getDate() - 52 * 7);
-  startDate.setDate(startDate.getDate() - startDate.getDay());
+  flat(PRE_LEAD);
 
-  const totalDays =
-    Math.ceil((today.getTime() - startDate.getTime()) / 86400000) + 1;
-  const totalWeeks = Math.ceil(totalDays / 7);
-
-  return Array.from({ length: totalWeeks }, (_, w) =>
-    Array.from({ length: 7 }, (_, d) => {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + w * 7 + d);
-      if (date > today) return { date: null, stat: null, dayIndex: d };
-      const key = date.toISOString().split("T")[0];
-      return { date, stat: lookup.get(key) ?? null, dayIndex: d };
-    })
-  );
-}
-
-function buildMonthLabels(
-  weeks: Cell[][]
-): { label: string; col: number }[] {
-  const labels: { label: string; col: number }[] = [];
-  let lastMonth = -1;
-  weeks.forEach((week, wi) => {
-    const first = week.find((c) => c.date !== null);
-    if (!first?.date) return;
-    const m = first.date.getMonth();
-    if (m !== lastMonth) {
-      labels.push({
-        label: first.date.toLocaleString("default", { month: "short" }),
-        col: wi,
-      });
-      lastMonth = m;
+  for (const day of sorted) {
+    if (day.requests === 0) {
+      flat(FLAT_GAP * 3);  // silent day = longer flat stretch
+    } else {
+      for (let i = 0; i < day.requests; i++) {
+        flat(FLAT_GAP);
+        spike();
+      }
+      flat(FLAT_GAP);
     }
-  });
-  return labels;
-}
-
-const CELL = 11;
-const GAP = 3;
-const DAY_LABEL_W = 28;
-const MONTH_LABEL_H = 18;
-const LEGEND_H = 16;
-
-export function MiniChart({ data }: { data: DayStat[] }) {
-  if (data.length === 0) {
-    return (
-      <div className="grid h-24 place-items-center text-xs text-muted-foreground">
-        No knocks recorded yet.
-      </div>
-    );
   }
 
-  const max = Math.max(...data.map((d) => d.requests), 1);
-  const weeks = buildGrid(data);
-  const monthLabels = buildMonthLabels(weeks);
+  flat(PRE_LEAD);
 
-  const totalW = DAY_LABEL_W + weeks.length * (CELL + GAP);
-  const gridH = 7 * (CELL + GAP);
-  const totalH = MONTH_LABEL_H + gridH + LEGEND_H + 4;
+  return new Float32Array(buf);
+}
+
+// ─── component ────────────────────────────────────────────────────────────────
+export function MiniChart({ data }: { data: DayStat[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    let animId: number;
+    let offset = 0;
+    let waveform = buildWaveform(data);
+    let W = 0;
+    let cursorX = 0;
+    const baseline = CANVAS_H * BASELINE_R;
+
+    const setup = () => {
+      W = container.clientWidth;
+      cursorX = Math.round(W * 0.78);
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(CANVAS_H * dpr);
+      canvas.style.width = `${W}px`;
+      canvas.style.height = `${CANVAS_H}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      waveform = buildWaveform(data);
+    };
+
+    setup();
+
+    const draw = () => {
+      ctx.clearRect(0, 0, W, CANVAS_H);
+
+      // background
+      ctx.fillStyle = "#080d14";
+      ctx.fillRect(0, 0, W, CANVAS_H);
+
+      // ECG-paper grid
+      ctx.strokeStyle = "rgba(57,211,83,0.07)";
+      ctx.lineWidth = 0.5;
+      for (let y = 0; y < CANVAS_H; y += GRID_SPACING) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+      for (let x = 0; x < W; x += GRID_SPACING) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CANVAS_H); ctx.stroke();
+      }
+      // centre baseline (slightly brighter)
+      ctx.strokeStyle = "rgba(57,211,83,0.14)";
+      ctx.beginPath(); ctx.moveTo(0, baseline); ctx.lineTo(W, baseline); ctx.stroke();
+
+      // waveform — clipped to left of scanning cursor
+      const len = waveform.length;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, cursorX, CANVAS_H);
+      ctx.clip();
+
+      // outer glow
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(57,211,83,0.22)";
+      ctx.lineWidth = 5;
+      ctx.shadowColor = "#39d353";
+      ctx.shadowBlur = 14;
+      for (let x = 0; x <= cursorX; x++) {
+        const idx = ((Math.floor(offset) + x) % len + len) % len;
+        const y = waveform[idx];
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // crisp inner line
+      ctx.beginPath();
+      ctx.strokeStyle = "#39d353";
+      ctx.lineWidth = 1.6;
+      ctx.shadowBlur = 6;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      for (let x = 0; x <= cursorX; x++) {
+        const idx = ((Math.floor(offset) + x) % len + len) % len;
+        const y = waveform[idx];
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // scanning cursor bar
+      const cg = ctx.createLinearGradient(cursorX - 1, 0, cursorX + 2, 0);
+      cg.addColorStop(0, "rgba(57,211,83,0)");
+      cg.addColorStop(0.5, "rgba(57,211,83,0.6)");
+      cg.addColorStop(1, "rgba(57,211,83,0)");
+      ctx.fillStyle = cg;
+      ctx.fillRect(cursorX - 1, 0, 3, CANVAS_H);
+
+      // glowing dot at exact waveform y
+      const dotIdx = ((Math.floor(offset) + cursorX) % len + len) % len;
+      const dotY = waveform[dotIdx];
+      ctx.beginPath();
+      ctx.arc(cursorX, dotY, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#39d353";
+      ctx.shadowColor = "#39d353";
+      ctx.shadowBlur = 16;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // right-side fade (blank paper ahead)
+      const fg = ctx.createLinearGradient(cursorX, 0, W, 0);
+      fg.addColorStop(0, "rgba(8,13,20,0.88)");
+      fg.addColorStop(1, "rgba(8,13,20,0.97)");
+      ctx.fillStyle = fg;
+      ctx.fillRect(cursorX, 0, W - cursorX, CANVAS_H);
+
+      offset = (offset + SCROLL_SPEED) % len;
+      animId = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(animId);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      setup();
+      offset = 0;
+      draw();
+    });
+    ro.observe(container);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      ro.disconnect();
+    };
+  }, [data]);
 
   return (
-    <div className="w-full rounded-md" style={{ background: "#0d1117", padding: "10px 14px" }}>
-      <svg
-        width="100%"
-        height={totalH}
-        viewBox={`0 0 ${totalW} ${totalH}`}
-        preserveAspectRatio="xMidYMid meet"
-        aria-label="Activity contribution graph"
-        style={{ display: "block" }}
-      >
-        {/* Month labels */}
-        {monthLabels.map(({ label, col }) => (
-          <text
-            key={`m-${col}`}
-            x={DAY_LABEL_W + col * (CELL + GAP)}
-            y={MONTH_LABEL_H - 5}
-            fontSize={10}
-            fill="#7d8590"
-            fontFamily="inherit"
-          >
-            {label}
-          </text>
-        ))}
-
-        {/* Day-of-week labels */}
-        {SHOWN_DAYS.map((di) => (
-          <text
-            key={`dl-${di}`}
-            x={DAY_LABEL_W - 4}
-            y={MONTH_LABEL_H + di * (CELL + GAP) + CELL - 1}
-            fontSize={9}
-            fill="#7d8590"
-            textAnchor="end"
-            fontFamily="inherit"
-          >
-            {DAY_LABELS[di]}
-          </text>
-        ))}
-
-        {/* Grid cells */}
-        {weeks.map((week, wi) =>
-          week.map((cell, di) => {
-            const x = DAY_LABEL_W + wi * (CELL + GAP);
-            const y = MONTH_LABEL_H + di * (CELL + GAP);
-
-            if (!cell.date) {
-              return (
-                <rect
-                  key={`${wi}-${di}`}
-                  x={x} y={y}
-                  width={CELL} height={CELL}
-                  rx={2} ry={2}
-                  fill="transparent"
-                />
-              );
-            }
-
-            const requests = cell.stat?.requests ?? 0;
-            const level = getLevel(requests, max);
-            const dateStr = cell.date.toISOString().split("T")[0];
-
-            return (
-              <rect
-                key={`${wi}-${di}`}
-                x={x} y={y}
-                width={CELL} height={CELL}
-                rx={2} ry={2}
-                fill={LEVEL_COLORS[level]}
-                stroke={level === 0 ? "#21262d" : "none"}
-                strokeWidth={0.5}
-              >
-                <title>
-                  {requests} request{requests !== 1 ? "s" : ""} on {dateStr}
-                </title>
-              </rect>
-            );
-          })
-        )}
-
-        {/* Legend */}
-        <text
-          x={DAY_LABEL_W}
-          y={MONTH_LABEL_H + gridH + LEGEND_H}
-          fontSize={9}
-          fill="#7d8590"
-          fontFamily="inherit"
-        >
-          Less
-        </text>
-        {LEVEL_COLORS.map((color, i) => (
-          <rect
-            key={`leg-${i}`}
-            x={DAY_LABEL_W + 28 + i * (CELL + 2)}
-            y={MONTH_LABEL_H + gridH + 4}
-            width={CELL} height={CELL}
-            rx={2} ry={2}
-            fill={color}
-            stroke={i === 0 ? "#21262d" : "none"}
-            strokeWidth={0.5}
-          />
-        ))}
-        <text
-          x={DAY_LABEL_W + 28 + 5 * (CELL + 2) + 2}
-          y={MONTH_LABEL_H + gridH + LEGEND_H}
-          fontSize={9}
-          fill="#7d8590"
-          fontFamily="inherit"
-        >
-          More
-        </text>
-      </svg>
+    <div
+      ref={containerRef}
+      className="w-full rounded-md overflow-hidden"
+      style={{ background: "#080d14" }}
+    >
+      <canvas ref={canvasRef} style={{ display: "block" }} />
     </div>
   );
 }
