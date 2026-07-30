@@ -84,9 +84,10 @@ export function useWakeEngine() {
         if (!m.enabled || !m.url) continue;
         active.add(m.id);
         if (!timers.current[m.id]) {
-          setStatus(m.id, "scheduled");
           schedule(m.id, 2000);
+          if (m.lastStatus !== "scheduled") setStatus(m.id, "scheduled");
         }
+
       }
       for (const id of Object.keys(timers.current)) {
         if (!active.has(id)) {
