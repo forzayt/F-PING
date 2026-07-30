@@ -134,9 +134,21 @@ export function MonitorCard({
               {m.method}
             </Badge>
           </div>
-          <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
-            {m.url || "no url set"}
-          </p>
+          {m.url ? (
+            <a
+              href={/^https?:\/\//i.test(m.url) ? m.url : `http://${m.url}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="mt-0.5 inline-block max-w-full truncate font-mono text-[11px] text-muted-foreground hover:text-primary hover:underline"
+            >
+              {m.url}
+            </a>
+          ) : (
+            <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+              no url set
+            </p>
+          )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <StatusPill status={m.enabled ? m.lastStatus : "paused"} />
@@ -207,16 +219,6 @@ export function MonitorCard({
               >
                 <Copy className="size-4" /> Duplicate
               </DropdownMenuItem>
-              {m.url && (
-                <DropdownMenuItem
-                  onSelect={() => {
-                    const href = /^https?:\/\//i.test(m.url) ? m.url : `http://${m.url}`;
-                    window.open(href, "_blank", "noopener,noreferrer");
-                  }}
-                >
-                  <ExternalLink className="size-4" /> Open URL
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={() => setConfirm(true)}
@@ -243,16 +245,6 @@ export function MonitorCard({
           <ContextMenuItem onSelect={() => onEdit(m)}>
             <Pencil className="size-4" /> Edit
           </ContextMenuItem>
-          {m.url && (
-            <ContextMenuItem
-              onSelect={() => {
-                const href = /^https?:\/\//i.test(m.url) ? m.url : `http://${m.url}`;
-                window.open(href, "_blank", "noopener,noreferrer");
-              }}
-            >
-              <ExternalLink className="size-4" /> Open URL
-            </ContextMenuItem>
-          )}
           <ContextMenuSeparator />
           <ContextMenuItem className="text-destructive focus:text-destructive" onSelect={() => setConfirm(true)}>
             <Trash2 className="size-4" /> Delete
