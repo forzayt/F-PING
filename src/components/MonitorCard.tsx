@@ -209,7 +209,10 @@ export function MonitorCard({
               </DropdownMenuItem>
               {m.url && (
                 <DropdownMenuItem
-                  onSelect={() => window.open(m.url, "_blank", "noopener")}
+                  onSelect={() => {
+                    const href = /^https?:\/\//i.test(m.url) ? m.url : `http://${m.url}`;
+                    window.open(href, "_blank", "noopener,noreferrer");
+                  }}
                 >
                   <ExternalLink className="size-4" /> Open URL
                 </DropdownMenuItem>
@@ -240,6 +243,16 @@ export function MonitorCard({
           <ContextMenuItem onSelect={() => onEdit(m)}>
             <Pencil className="size-4" /> Edit
           </ContextMenuItem>
+          {m.url && (
+            <ContextMenuItem
+              onSelect={() => {
+                const href = /^https?:\/\//i.test(m.url) ? m.url : `http://${m.url}`;
+                window.open(href, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <ExternalLink className="size-4" /> Open URL
+            </ContextMenuItem>
+          )}
           <ContextMenuSeparator />
           <ContextMenuItem className="text-destructive focus:text-destructive" onSelect={() => setConfirm(true)}>
             <Trash2 className="size-4" /> Delete
