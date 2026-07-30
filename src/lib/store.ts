@@ -24,7 +24,13 @@ let hydrated = false;
 const listeners = new Set<() => void>();
 
 function emit() {
-  for (const l of listeners) l();
+  for (const l of Array.from(listeners)) {
+    try {
+      l();
+    } catch (err) {
+      console.error("[fping] store listener failed", err);
+    }
+  }
 }
 
 function persist() {
