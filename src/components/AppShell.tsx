@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Menu, Plus, Search, Zap } from "lucide-react";
+import { Menu, Plus, Search, Star, Zap } from "lucide-react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { MonitorDialog } from "@/components/MonitorDialog";
@@ -139,6 +139,16 @@ export function AppShell({
                     ⌘K
                   </kbd>
                 </Button>
+                <a
+                  href="https://github.com/forzayt/F-PING"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-glass-border bg-glass px-3 py-1.5 text-xs font-medium text-foreground hover:bg-sidebar-accent hover:text-primary transition-colors"
+                >
+                  <Star className="size-3.5 text-amber-400 fill-amber-400/20" />
+                  <span className="hidden sm:inline">Star on GitHub</span>
+                  <span className="sm:hidden">Star</span>
+                </a>
                 {actions}
               </div>
             </div>
